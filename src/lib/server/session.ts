@@ -1,8 +1,10 @@
 import { IoRedisSessionStore } from '@ethercorps/sveltekit-redis-session';
 import { dev } from '$app/environment';
 import Redis from 'ioredis';
+import { REDIS_CONNECTION_STRING } from '$env/static/private';
+
 export const sessionManager = new IoRedisSessionStore({
-    redisClient: new Redis(), // Required A pre-initiated redis client
+    redisClient: new Redis(REDIS_CONNECTION_STRING), // Required A pre-initiated redis client
     secret: 'your-secret-key', // Required A secret key for encryption and other things,
     cookieName: 'session', // CookieName to be saved in cookies for browser Default session
     sessionPrefix: 'bsky-lastfm:session',
