@@ -1,6 +1,5 @@
-import { agent } from '$lib/agent';
 import { sessionManager } from '$lib/server/session';
-import { isValidDidDoc, getPdsEndpoint } from '@atproto/common-web';
+import { isValidDidDoc, getPdsEndpoint } from '@atproto/common';
 import type { PageServerLoad } from './$types';
 import { type IUser, User } from '$lib/server/db';
 import { redirect, type Actions } from '@sveltejs/kit';
@@ -54,47 +53,28 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions = {
     login: async ({ request, locals, cookies }) => {
-        const input = await request.formData();
+        const data = await request.json();
 
-        const identifier = String(input.get('identifier'));
-        const password = String(input.get('password'));
+        const { did, handle, accessJwt, refreshJwt, didDoc } = data;
 
-        const auth = await agent
-            .login({
-                identifier: identifier,
-                password: password
-            })
-            .then((res) => {
-                const { did, handle, accessJwt, refreshJwt, didDoc } = res.data;
+        if (isValidDidDoc(didDoc)) {
+            const pds = getPdsEndpoint(didDoc) ?? 'https://bsky.social/';
+            User.findByIdAndUpdate(
+                did,
+                { handle: handle, pds: pds, bskyRefreshToken: refreshJwt },
+                { upsert: true }
+            ).exec();
 
-                if (isValidDidDoc(didDoc)) {
-                    const pds = getPdsEndpoint(didDoc) ?? 'https://bsky.social/';
-                    User.findByIdAndUpdate(
-                        did,
-                        { handle: handle, pds: pds, bskyRefreshToken: refreshJwt },
-                        { upsert: true }
-                    ).exec();
-                    return {
-                        did: did,
-                        handle: handle,
-                        pds: pds,
-                        accessJwt: accessJwt,
-                        refreshJwt: refreshJwt
-                    };
-                }
-            })
-            .catch((e) => {
-                console.log(e);
-            });
-
-        if (!auth) {
-            return {
-                error: true,
-                msg: 'Could not login'
+            const auth = {
+                did: did,
+                handle: handle,
+                pds: pds,
+                accessJwt: accessJwt,
+                refreshJwt: refreshJwt
             };
+            locals.user = auth;
+            await sessionManager.createSession(cookies, auth, auth.did);
         }
-        locals.user = auth;
-        await sessionManager.createSession(cookies, auth, auth.did);
         throw redirect(302, '/');
     },
     logout: async ({ locals, cookies }) => {

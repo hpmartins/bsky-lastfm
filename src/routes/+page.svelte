@@ -1,12 +1,46 @@
 <script lang="ts">
-    import { enhance } from '$app/forms';
+    import { applyAction, deserialize, enhance } from '$app/forms';
+    import type { ActionResult } from '@sveltejs/kit';
     import type { ActionData, PageServerData } from './$types';
+    import { invalidateAll } from '$app/navigation';
 
     export let form: ActionData;
 
     export let data: PageServerData;
     $: show = data.isUserLoggedIn;
     $: user = data.user;
+
+    async function handleLogin(event: { currentTarget: EventTarget & HTMLFormElement }) {
+        const action = event.currentTarget.action;
+        const data = new FormData(event.currentTarget);
+        const identifier = data.get('identifier');
+        const password = data.get('password');
+
+        const auth = await fetch('https://bsky.social/xrpc/com.atproto.server.createSession', {
+            method: 'POST',
+            body: JSON.stringify({
+                identifier: identifier,
+                password: password
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((res) => res.json());
+
+        const response = await fetch(action, {
+            method: 'POST',
+            body: JSON.stringify(auth)
+        });
+
+        const result: ActionResult = deserialize(await response.text());
+
+        if (result.type === 'success') {
+            // rerun all `load` functions, following the successful update
+            await invalidateAll();
+        }
+
+        applyAction(result);
+    }
 </script>
 
 {#if show}
@@ -65,7 +99,12 @@
         </div>
     </div>
 {:else}
-    <form method="POST" action="?/login" class="mt-6 flex items-center max-w-2xl mx-auto flex-col gap-2" use:enhance>
+    <form
+        method="POST"
+        action="?/login"
+        class="mt-6 flex items-center max-w-2xl mx-auto flex-col gap-2"
+        on:submit|preventDefault={handleLogin}
+    >
         <input
             type="text"
             name="identifier"
