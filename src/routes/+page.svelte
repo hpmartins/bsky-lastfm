@@ -71,14 +71,6 @@
                 {/if}
             </div>
         </form>
-        <!-- <input
-        class="input input-sm input-bordered input-primary"
-        type="text"
-        id="lastfmUser"
-        name="lastfmUser"
-        value="hpmartins"
-        placeholder="Last.FM username"
-      /> -->
         <select class="select select-sm text-xs select-primary w-full max-w-xs">
             <option disabled selected>What chart?</option>
             <option>Game of Thrones</option>
@@ -111,7 +103,6 @@
             id="identifier"
             class="input input-sm input-bordered border-primary hover:border-secondary w-full max-w-md"
             placeholder="your bluesky identifier"
-            value="did:plc:fatjkn3ztc7tyhgar3rfjahb"
         />
         <input
             type="password"
@@ -119,7 +110,6 @@
             id="password"
             class="input input-sm input-bordered border-primary hover:border-secondary w-full max-w-md"
             placeholder="app password"
-            value="gnut-u375-fheb-nfby"
         />
         <div class="text-left">
             <span class="text-xs text-primary">
@@ -127,7 +117,6 @@
                 <a class="link text-secondary" target="_blank" href="https://bsky.app/settings/app-passwords">
                     app password here
                 </a>
-                and delete it once you're done
             </span>
         </div>
         <div class="mt-4 sm:ml-4 flex">
