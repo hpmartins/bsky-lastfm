@@ -13,14 +13,6 @@ import { redirect } from '@sveltejs/kit';
 
 const md5 = (data: string) => crypto.createHash('md5').update(data).digest('hex');
 
-const LASTFM_ENDPOINT = `http://ws.audioscrobbler.com/2.0/`;
-
-const SPOTIFY_HEADERS = {
-    'content-type': 'application/x-www-form-urlencoded',
-    Authorization: 'Basic ' + btoa(`${SPOTIFY_API_KEY}:${SPOTIFY_SECRET}`)
-};
-const SPOTIFY_TOKEN_URL = `https://accounts.spotify.com/api/token`;
-
 export const GET: RequestHandler = async ({ locals, url }) => {
     const user = locals.user;
     const isAuthenticated = locals.isUserLoggedIn;
@@ -45,7 +37,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
                     session: { name: string; key: string; subscriber: number };
                     message?: string;
                     error?: number;
-                } = await fetch(`${LASTFM_ENDPOINT}?${p}`).then((res) => res.json());
+                } = await fetch(`http://ws.audioscrobbler.com/2.0/?${p}`).then((res) => res.json());
 
                 console.log(lastfm);
 
@@ -58,15 +50,21 @@ export const GET: RequestHandler = async ({ locals, url }) => {
             const state = url.searchParams.get('state') ?? undefined;
             if (code && state && state === RANDOM_STRING && !userData.spotify) {
                 console.log('got code:', code);
-                const spotify = await fetch(SPOTIFY_TOKEN_URL, {
+                const tokenUrl = `https://accounts.spotify.com/api/token`;
+                const spotify = await fetch(tokenUrl, {
                     method: 'POST',
-                    headers: SPOTIFY_HEADERS,
+                    headers: {
+                        'content-type': 'application/x-www-form-urlencoded',
+                        Authorization: 'Basic ' + btoa(`${SPOTIFY_API_KEY}:${SPOTIFY_SECRET}`)
+                    },
                     body: new URLSearchParams({
                         code: code,
                         redirect_uri: SPOTIFY_CALLBACK_URL,
                         grant_type: 'authorization_code'
                     })
                 }).then((res) => res.json());
+
+                console.log(spotify);
 
                 if (!spotify.error) {
                     await User.findByIdAndUpdate(user.did, { spotify: spotify });
