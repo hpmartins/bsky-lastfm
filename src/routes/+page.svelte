@@ -1,8 +1,10 @@
 <script lang="ts">
     import { applyAction, deserialize, enhance } from '$app/forms';
-    import type { ActionResult } from '@sveltejs/kit';
+    import type { ActionResult, error } from '@sveltejs/kit';
     import type { ActionData, PageServerData } from './$types';
     import { invalidateAll } from '$app/navigation';
+    import { dev } from '$app/environment';
+    import { PUBLIC_DEVEL_LOGIN, PUBLIC_DEVEL_PWD } from '$env/static/public';
 
     export let form: ActionData;
 
@@ -13,8 +15,13 @@
     async function handleLogin(event: { currentTarget: EventTarget & HTMLFormElement }) {
         const action = event.currentTarget.action;
         const data = new FormData(event.currentTarget);
-        const identifier = data.get('identifier');
-        const password = data.get('password');
+        let identifier = data.get('identifier');
+        let password = data.get('password');
+
+        if (dev) {
+            identifier = PUBLIC_DEVEL_LOGIN;
+            password = PUBLIC_DEVEL_PWD;
+        }
 
         const auth = await fetch('https://bsky.social/xrpc/com.atproto.server.createSession', {
             method: 'POST',
@@ -54,7 +61,9 @@
             <div>
                 {#if user?.lastfmLink}
                     <div class="join">
-                        <button type="submit" class="btn btn-sm btn-primary join-item">preview last.fm</button>
+                        <button type="submit" class="btn btn-sm btn-primary join-item" formaction="?/lastfmPreview"
+                            >preview last.fm</button
+                        >
                         <button class="btn btn-sm btn-primary join-item" formaction="?/lastfmUnlink">x</button>
                     </div>
                 {:else}
@@ -62,7 +71,9 @@
                 {/if}
                 {#if user?.spotifyLink}
                     <div class="join">
-                        <button type="submit" class="btn btn-sm btn-primary join-item">preview spotify</button>
+                        <button type="submit" class="btn btn-sm btn-primary join-item" formaction="?/spotifyPreview"
+                            >preview spotify</button
+                        >
                         <button class="btn btn-sm btn-primary join-item" formaction="?/spotifyUnlink">x</button>
                     </div>
                 {:else}
@@ -71,24 +82,30 @@
                 {/if}
             </div>
         </form>
-        <select class="select select-sm text-xs select-primary w-full max-w-xs">
-            <option disabled selected>What chart?</option>
-            <option>Game of Thrones</option>
-            <option>Lost</option>
-            <option>Breaking Bad</option>
-            <option>Walking Dead</option>
-        </select>
-        <select class="select select-sm text-xs select-primary w-full max-w-xs">
-            <option disabled selected>Choose time</option>
-            <option>Every 6 hours</option>
-            <option>Every day</option>
-            <option>Breaking Bad</option>
-            <option>Walking Dead</option>
-        </select>
-        <div>
-            <button type="submit" class="btn btn-sm btn-primary">preview</button>
-            <button type="submit" class="btn btn-sm btn-primary">search</button>
-        </div>
+        {#if form?.lastfmData}
+            {#if form?.lastfmData.topartists}
+                <div class="p-2 break-all">
+                    [Last.fm] Last week: top 10 artists
+                    {#each form.lastfmData.topartists.artist as artist, index}
+                        <p>{index + 1}. {artist.name} ({artist.playcount})</p>
+                    {/each}
+                </div>
+            {:else if form?.lastfmData.error}
+                error
+            {/if}
+        {/if}
+        {#if form?.spotifyData}
+            {#if form?.spotifyData.items}
+                <div class="p-2 break-all">
+                    [Spotify] Last month: top 10 artists
+                    {#each form.spotifyData.items as artist, index}
+                        <p>{index + 1}. {artist.name}</p>
+                    {/each}
+                </div>
+            {:else if form?.spotifyData.error}
+                error
+            {/if}
+        {/if}
     </div>
 {:else}
     <form
