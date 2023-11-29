@@ -11,7 +11,7 @@ export const sessionManager = new IoRedisSessionStore({
     userSessionsPrefix: 'bsky-lastfm:user',
     signed: true, // Do you want to sign your cookies Default true
     useTTL: false, // Do you wanna use redis's Expire key functionality Default false
-    renewSessionBeforeExpire: false, // Do you wanna update session expire time in built function Default false
+    renewSessionBeforeExpire: true, // Do you wanna update session expire time in built function Default false
     renewBeforeSeconds: 30 * 60, // If renewSessionBeforeExpire is true define your renew before time in seconds Default 30 minutes
     serializer: JSON, // You can define your own serializer functions to stringify and parse sessionData for redis Default JSON
     cookiesOptions: {
