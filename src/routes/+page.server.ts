@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { sessionManager } from '$lib/server/session';
 import { isValidDidDoc, getPdsEndpoint } from '@atproto/common';
 import type { PageServerLoad } from './$types';
@@ -17,30 +18,16 @@ const SPOTIFY_ENDPOINT = 'https://api.spotify.com/v1';
 
 export const ssr = true;
 export const load: PageServerLoad = async ({ locals }) => {
-    const user = locals.user;
-    const isAuthenticated = locals.isUserLoggedIn;
-
-    if (user && isAuthenticated) {
-        const userData = await User.findById<IUser>(user.did);
-        if (userData) {
-            return {
-                user: {
-                    ...user,
-                    lastfmLink: userData?.lastfm ? true : false,
-                    spotifyLink: userData?.spotify ? true : false
-                },
-                isUserLoggedIn: isAuthenticated
-            };
-        }
-    }
+    const { user, lastfm, spotify } = locals;
 
     return {
-        user: null,
-        isUserLoggedIn: false
-    };
+        user: Boolean(user),
+        lastfm: Boolean(lastfm),
+        spotify: Boolean(spotify)
+    }
 };
 
-const spotifyRefreshToken = async (user: IUser) => {
+const getSpotifyAccessToken = async (refresh_token: string) => {
     const url = `https://accounts.spotify.com/api/token`;
 
     const payload = {
@@ -51,7 +38,7 @@ const spotifyRefreshToken = async (user: IUser) => {
         },
         body: new URLSearchParams({
             grant_type: 'refresh_token',
-            refresh_token: String(user.spotify?.refresh_token),
+            refresh_token: refresh_token,
             client_id: SPOTIFY_API_KEY
         })
     };
@@ -59,30 +46,24 @@ const spotifyRefreshToken = async (user: IUser) => {
     const body = await fetch(url, payload);
     const response = await body.json();
 
-    if (response.error) return null;
+    if (response.error) return;
 
-    const newUser: IUser | null = await User.findByIdAndUpdate(
-        user._id,
-        {
-            'spotify.access_token': response.access_token
-        },
-        { new: true }
-    );
-    return newUser;
+    // update db if logged in
+    return response.access_token as string;
 };
 
 type ISpotifyArtist = {
-    external_urls: object,
-    followers: object,
-    genres: string[],
-    href: string,
-    id: string,
-    images: string[],
-    name: string,
-    popularity: number,
-    type: string,
-    uri: string,
-}
+    external_urls: object;
+    followers: object;
+    genres: string[];
+    href: string;
+    id: string;
+    images: string[];
+    name: string;
+    popularity: number;
+    type: string;
+    uri: string;
+};
 
 type ILastfmArtist = {
     streamable: string;
@@ -94,11 +75,11 @@ type ILastfmArtist = {
         rank: string;
     };
     name: string;
-}
+};
 
 interface ISpotifyTopArtists {
-    error?: string,
-    items?: ISpotifyArtist[],
+    error?: string;
+    items?: ISpotifyArtist[];
 }
 
 interface ILastfmTopArtists {
@@ -113,49 +94,46 @@ interface ILastfmTopArtists {
 
 export const actions = {
     spotifyPreview: async ({ locals }) => {
-        if (locals.user && locals.isUserLoggedIn) {
-            let user: IUser | null = await User.findById(locals.user.did);
-            if (user && user.spotify) {
-                user = await spotifyRefreshToken(user);
-                if (user && user.spotify) {
-                    const params = new URLSearchParams({
-                        time_range: 'short_term',
-                        limit: String(10)
-                    });
+        if (locals.spotify) {
+            const access_token = await getSpotifyAccessToken(locals.spotify.refresh_token);
+            if (access_token) {
+                const params = new URLSearchParams({
+                    time_range: 'short_term',
+                    limit: String(10)
+                });
 
-                    const data = await fetch(`${SPOTIFY_ENDPOINT}/me/top/artists?${params}`, {
-                        headers: {
-                            Authorization: `${user.spotify.token_type} ${user.spotify.access_token}`
-                        }
-                    }).then((res) => res.json()).then(x => x as ISpotifyTopArtists);
-                    console.log('spotify', data);
-                    return {
-                        spotifyData: data
-                    };
-                }
+                const data = await fetch(`${SPOTIFY_ENDPOINT}/me/top/artists?${params}`, {
+                    headers: {
+                        Authorization: `Bearer ${access_token}`
+                    }
+                })
+                    .then((res) => res.json())
+                    .then((x) => x as ISpotifyTopArtists);
+                console.log('spotify', data);
+                return {
+                    spotifyData: data
+                };
             }
         }
     },
     lastfmPreview: async ({ locals }) => {
-        if (locals.user && locals.isUserLoggedIn) {
-            const user: IUser | null = await User.findById(locals.user.did);
+        if (locals.lastfm) {
+            const params = new URLSearchParams({
+                method: 'user.getTopArtists',
+                user: locals.lastfm.name,
+                period: '7day',
+                limit: String(10),
+                api_key: LASTFM_API_KEY,
+                format: 'json'
+            });
 
-            if (user && user.lastfm) {
-                const params = new URLSearchParams({
-                    method: 'user.getTopArtists',
-                    user: user.lastfm.name,
-                    period: '7day',
-                    limit: String(10),
-                    api_key: LASTFM_API_KEY,
-                    format: 'json'
-                });
-
-                const data = await fetch(`${LASTFM_ENDPOINT}/?${params}`).then((res) => res.json()).then(x => x as ILastfmTopArtists);
-                console.log('lastfm', data.topartists?.artist);
-                return {
-                    lastfmData: data
-                };
-            }
+            const data = await fetch(`${LASTFM_ENDPOINT}/?${params}`)
+                .then((res) => res.json())
+                .then((x) => x as ILastfmTopArtists);
+            console.log('lastfm', data.topartists?.artist);
+            return {
+                lastfmData: data
+            };
         }
     },
     login: async ({ request, locals, cookies }) => {
@@ -165,35 +143,38 @@ export const actions = {
 
         if (isValidDidDoc(didDoc)) {
             const pds = getPdsEndpoint(didDoc) ?? 'https://bsky.social/';
-            const user = await User.findByIdAndUpdate(
-                did,
-                { handle: handle, pds: pds, bskyRefreshToken: refreshJwt },
-                { upsert: true, new: true }
-            );
+            // const user = await User.findByIdAndUpdate(
+            //     did,
+            //     { handle: handle, pds: pds, bskyRefreshToken: refreshJwt },
+            //     { upsert: true, new: true }
+            // );
 
             const auth = {
                 did: did,
                 handle: handle,
                 pds: pds,
                 accessJwt: accessJwt,
-                refreshJwt: refreshJwt,
-                lastfmLink: user?.lastfm ? true : false,
-                spotifyLink: user?.spotify ? true : false
+                refreshJwt: refreshJwt
             };
 
-            locals.user = auth;
-            await sessionManager.createSession(cookies, auth, auth.did);
+            const currSession = await sessionManager.getSession(cookies);
+            if (currSession && currSession.data) {
+                await sessionManager.updateSession(cookies, {...currSession.data, user: auth })
+            } else {
+                await sessionManager.createSession(cookies, { user: auth }, auth.did)
+            }
         }
         throw redirect(302, '/');
     },
-    logout: async ({ locals, cookies }) => {
-        await sessionManager.deleteSession(cookies);
-        locals.isUserLoggedIn = false;
-        locals.user = undefined;
+    logout: async ({ cookies }) => {
+        const currSession = await sessionManager.getSession(cookies);
+        if (currSession && currSession.data) {
+            await sessionManager.updateSession(cookies, {...currSession.data, user: undefined })
+        }
         throw redirect(302, '/');
     },
     lastfmLink: async ({ locals }) => {
-        if (locals.user && !locals.user.lastfmLink) {
+        if (!locals.lastfm) {
             console.log('have to link lastfm');
             const params = new URLSearchParams({
                 api_key: LASTFM_API_KEY,
@@ -203,15 +184,16 @@ export const actions = {
         }
         throw redirect(302, '/');
     },
-    lastfmUnlink: async ({ locals }) => {
-        if (locals.user) {
-            locals.user.lastfmLink = false;
-            await User.findByIdAndUpdate(locals.user.did, { lastfm: null });
+    lastfmUnlink: async ({ cookies }) => {
+        const currSession = await sessionManager.getSession(cookies);
+        if (currSession && currSession.data) {
+            await sessionManager.updateSession(cookies, {...currSession.data, lastfm: undefined })
         }
+        // update db if logged in
         throw redirect(302, '/');
     },
     spotifyLink: async ({ locals }) => {
-        if (locals.user && !locals.user.spotifyLink) {
+        if (!locals.spotify) {
             console.log('have to link spotify');
             const params = new URLSearchParams({
                 response_type: 'code',
@@ -224,11 +206,12 @@ export const actions = {
         }
         throw redirect(302, '/');
     },
-    spotifyUnlink: async ({ locals }) => {
-        if (locals.user) {
-            locals.user.spotifyLink = false;
-            await User.findByIdAndUpdate(locals.user.did, { spotify: null });
+    spotifyUnlink: async ({ cookies }) => {
+        const currSession = await sessionManager.getSession(cookies);
+        if (currSession && currSession.data) {
+            await sessionManager.updateSession(cookies, {...currSession.data, spotify: undefined })
         }
+        // update db if logged in
         throw redirect(302, '/');
     }
 } satisfies Actions;

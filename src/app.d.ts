@@ -4,18 +4,22 @@ declare global {
     namespace App {
         // interface Error {}
         interface Locals {
-            isUserLoggedIn: boolean;
-            user:
-                | {
-                      did: string;
-                      handle: string;
-                      pds: string;
-                      accessJwt: string;
-                      refreshJwt: string;
-                      lastfmLink?: boolean;
-                      spotifyLink?: boolean;
-                  }
-                | undefined;
+            user?: {
+                did: string;
+                handle: string;
+                pds: string;
+                accessJwt: string;
+                refreshJwt: string;
+            };
+            lastfm?: {
+                name: string;
+                key: string;
+                subscriber: number;
+            };
+            spotify?: {
+                access_token: string;
+                refresh_token: string;
+            };
         }
         // interface PageData {}
         // interface Platform {}
