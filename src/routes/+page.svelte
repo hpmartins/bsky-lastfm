@@ -11,7 +11,7 @@
 
     let cOptions: CirclesOptionsType = {
         orbits: 2,
-        add_watermark: true,
+        add_watermark: false,
         add_date: true,
         bg_color: '#1D428A',
         add_border: true,
