@@ -38,9 +38,9 @@ export const GET: RequestHandler = async ({ locals, cookies, url }) => {
             if (!lastfm.error) {
                 const currSession = await sessionManager.getSession(cookies);
                 if (currSession.data) {
-                    await sessionManager.updateSession(cookies, {...currSession.data, lastfm: lastfm.session })
+                    await sessionManager.updateSession(cookies, { ...currSession.data, lastfm: lastfm.session });
                 } else {
-                    await sessionManager.createSession(cookies, { lastfm: lastfm.session }, crypto.randomUUID())
+                    await sessionManager.createSession(cookies, { lastfm: lastfm.session }, crypto.randomUUID());
                 }
             }
         }
@@ -68,9 +68,9 @@ export const GET: RequestHandler = async ({ locals, cookies, url }) => {
             if (!spotify.error) {
                 const currSession = await sessionManager.getSession(cookies);
                 if (currSession.data) {
-                    await sessionManager.updateSession(cookies, {...currSession.data, spotify: spotify })
+                    await sessionManager.updateSession(cookies, { ...currSession.data, spotify: spotify });
                 } else {
-                    await sessionManager.createSession(cookies, { spotify: spotify }, crypto.randomUUID())
+                    await sessionManager.createSession(cookies, { spotify: spotify }, crypto.randomUUID());
                 }
             }
         }

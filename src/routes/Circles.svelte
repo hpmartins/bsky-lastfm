@@ -18,14 +18,14 @@
     if (query.data?.type === 'lastfm') {
         list = query.data.list.map((x) => ({
             name: x.name,
-            image: x.image[1]['#text'],
+            image: x.image[1]['#text']
         }));
     }
 
     if (query.data?.type === 'spotify') {
         list = query.data.list.map((x) => ({
             name: x.name,
-            image: x.images[2].url,
+            image: x.images[2].url
         }));
     }
 

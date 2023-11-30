@@ -33,12 +33,12 @@ export type LastfmArtistType = {
 export type ILastfmArtists = {
     type: 'lastfm';
     list: LastfmArtistType[];
-}
+};
 
 export type ISpotifyArtists = {
     type: 'spotify';
     list: SpotifyArtistType[];
-}
+};
 
 export interface IQuery {
     error?: string;

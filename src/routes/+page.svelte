@@ -10,13 +10,13 @@
     import Preview from './Preview.svelte';
 
     let cOptions: CirclesOptionsType = {
-    orbits: 2,
-    add_watermark: true,
-    add_date: true,
-    bg_color: '#1D428A',
-    add_border: true,
-    border_color: '#FFC72C',
-  };
+        orbits: 2,
+        add_watermark: true,
+        add_date: true,
+        bg_color: '#1D428A',
+        add_border: true,
+        border_color: '#FFC72C'
+    };
 
     export let form: ActionData;
 

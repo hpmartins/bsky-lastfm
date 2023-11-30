@@ -9,5 +9,5 @@ const port = process.env.PORT ?? 8000;
 app.use(handler);
 
 app.listen(port, () => {
-	console.log(`[${new Date().toLocaleTimeString()}] [musica] listening on port ${port}`);
+    console.log(`[${new Date().toLocaleTimeString()}] [musica] listening on port ${port}`);
 });
