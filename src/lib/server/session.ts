@@ -7,8 +7,8 @@ export const sessionManager = new IoRedisSessionStore({
     redisClient: new Redis(REDIS_CONNECTION_STRING), // Required A pre-initiated redis client
     secret: 'your-secret-key', // Required A secret key for encryption and other things,
     cookieName: 'session', // CookieName to be saved in cookies for browser Default session
-    sessionPrefix: 'bsky-lastfm:session',
-    userSessionsPrefix: 'bsky-lastfm:user',
+    sessionPrefix: 'musica:session',
+    userSessionsPrefix: 'musica:user',
     signed: true, // Do you want to sign your cookies Default true
     useTTL: false, // Do you wanna use redis's Expire key functionality Default false
     renewSessionBeforeExpire: true, // Do you wanna update session expire time in built function Default false
