@@ -90,7 +90,7 @@ export const actions = {
                 method: 'user.getTopArtists',
                 user: locals.lastfm.name,
                 period: '7day',
-                limit: String(10),
+                limit: String(30),
                 api_key: LASTFM_API_KEY,
                 format: 'json'
             });
