@@ -12,6 +12,7 @@ import {
     SPOTIFY_CALLBACK_URL,
     SPOTIFY_SECRET
 } from '$env/static/private';
+import type { IQuery } from '$lib/types';
 
 const LASTFM_ENDPOINT = 'http://ws.audioscrobbler.com/2.0';
 const SPOTIFY_ENDPOINT = 'https://api.spotify.com/v1';
@@ -24,7 +25,7 @@ export const load: PageServerLoad = async ({ locals }) => {
         user: Boolean(user),
         lastfm: Boolean(lastfm),
         spotify: Boolean(spotify)
-    }
+    };
 };
 
 const getSpotifyAccessToken = async (refresh_token: string) => {
@@ -52,46 +53,6 @@ const getSpotifyAccessToken = async (refresh_token: string) => {
     return response.access_token as string;
 };
 
-type ISpotifyArtist = {
-    external_urls: object;
-    followers: object;
-    genres: string[];
-    href: string;
-    id: string;
-    images: string[];
-    name: string;
-    popularity: number;
-    type: string;
-    uri: string;
-};
-
-type ILastfmArtist = {
-    streamable: string;
-    image: object[];
-    mbid: string;
-    url: string;
-    playcount: string;
-    '@attr': {
-        rank: string;
-    };
-    name: string;
-};
-
-interface ISpotifyTopArtists {
-    error?: string;
-    items?: ISpotifyArtist[];
-}
-
-interface ILastfmTopArtists {
-    error?: string;
-    topartists?: {
-        artist: ILastfmArtist[];
-        '@attr': {
-            [key: string]: string;
-        };
-    };
-}
-
 export const actions = {
     spotifyPreview: async ({ locals }) => {
         if (locals.spotify) {
@@ -99,19 +60,26 @@ export const actions = {
             if (access_token) {
                 const params = new URLSearchParams({
                     time_range: 'short_term',
-                    limit: String(10)
+                    limit: String(30)
                 });
 
-                const data = await fetch(`${SPOTIFY_ENDPOINT}/me/top/artists?${params}`, {
+                const query = await fetch(`${SPOTIFY_ENDPOINT}/me/top/artists?${params}`, {
                     headers: {
                         Authorization: `Bearer ${access_token}`
                     }
                 })
                     .then((res) => res.json())
-                    .then((x) => x as ISpotifyTopArtists);
-                console.log('spotify', data);
+                    .then((res) => {
+                        if (res.error) return res as IQuery;
+                        return {
+                            data: {
+                                type: 'spotify',
+                                list: res.items
+                            }
+                        } as IQuery;
+                    });
                 return {
-                    spotifyData: data
+                    query: query
                 };
             }
         }
@@ -127,12 +95,19 @@ export const actions = {
                 format: 'json'
             });
 
-            const data = await fetch(`${LASTFM_ENDPOINT}/?${params}`)
+            const query = await fetch(`${LASTFM_ENDPOINT}/?${params}`)
                 .then((res) => res.json())
-                .then((x) => x as ILastfmTopArtists);
-            console.log('lastfm', data.topartists?.artist);
+                .then((res) => {
+                    if (res.error) return res as IQuery;
+                    return {
+                        data: {
+                            type: 'lastfm',
+                            list: res.topartists.artist
+                        }
+                    } as IQuery;
+                });
             return {
-                lastfmData: data
+                query: query
             };
         }
     },
@@ -159,9 +134,9 @@ export const actions = {
 
             const currSession = await sessionManager.getSession(cookies);
             if (currSession && currSession.data) {
-                await sessionManager.updateSession(cookies, {...currSession.data, user: auth })
+                await sessionManager.updateSession(cookies, { ...currSession.data, user: auth });
             } else {
-                await sessionManager.createSession(cookies, { user: auth }, auth.did)
+                await sessionManager.createSession(cookies, { user: auth }, auth.did);
             }
         }
         throw redirect(302, '/');
@@ -169,7 +144,7 @@ export const actions = {
     logout: async ({ cookies }) => {
         const currSession = await sessionManager.getSession(cookies);
         if (currSession && currSession.data) {
-            await sessionManager.updateSession(cookies, {...currSession.data, user: undefined })
+            await sessionManager.updateSession(cookies, { ...currSession.data, user: undefined });
         }
         throw redirect(302, '/');
     },
@@ -187,7 +162,7 @@ export const actions = {
     lastfmUnlink: async ({ cookies }) => {
         const currSession = await sessionManager.getSession(cookies);
         if (currSession && currSession.data) {
-            await sessionManager.updateSession(cookies, {...currSession.data, lastfm: undefined })
+            await sessionManager.updateSession(cookies, { ...currSession.data, lastfm: undefined });
         }
         // update db if logged in
         throw redirect(302, '/');
@@ -209,7 +184,7 @@ export const actions = {
     spotifyUnlink: async ({ cookies }) => {
         const currSession = await sessionManager.getSession(cookies);
         if (currSession && currSession.data) {
-            await sessionManager.updateSession(cookies, {...currSession.data, spotify: undefined })
+            await sessionManager.updateSession(cookies, { ...currSession.data, spotify: undefined });
         }
         // update db if logged in
         throw redirect(302, '/');

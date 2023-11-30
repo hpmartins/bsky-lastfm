@@ -5,6 +5,18 @@
     import { invalidateAll } from '$app/navigation';
     import { dev } from '$app/environment';
     import { PUBLIC_DEVEL_LOGIN, PUBLIC_DEVEL_PWD } from '$env/static/public';
+    import Circles from './Circles.svelte';
+    import type { CirclesOptionsType } from '$lib/types';
+    import Preview from './Preview.svelte';
+
+    let cOptions: CirclesOptionsType = {
+    orbits: 2,
+    add_watermark: true,
+    add_date: true,
+    bg_color: '#1D428A',
+    add_border: true,
+    border_color: '#FFC72C',
+  };
 
     export let form: ActionData;
 
@@ -92,31 +104,9 @@
             {/if}
         </div>
     </form>
-    {#if form?.lastfmData}
-        {#if form?.lastfmData.topartists}
-            <div class="text-left">
-                <p class="text-lg text-bold underline">Last.fm</p>
-                <p class="italic">Last week: top 10 artists</p>
-                {#each form.lastfmData.topartists.artist as artist, index}
-                    <p>{index + 1}. {artist.name} ({artist.playcount})</p>
-                {/each}
-            </div>
-        {:else if form?.lastfmData.error}
-            error
-        {/if}
-    {/if}
-    {#if form?.spotifyData}
-        {#if form?.spotifyData.items}
-            <div class="text-left">
-                <p class="text-lg text-bold underline">Spotify</p>
-                <p class="italic">Last month: top 10 artists</p>
-                {#each form.spotifyData.items as artist, index}
-                    <p>{index + 1}. {artist.name}</p>
-                {/each}
-            </div>
-        {:else if form?.spotifyData.error}
-            error
-        {/if}
+    {#if form?.query}
+        <Preview query={form.query} />
+        <Circles query={form.query} options={cOptions} />
     {/if}
 
     <hr class="w-1/2 h-1 mx-auto my-4 bg-secondary border-0 rounded md:my-4" />
@@ -124,7 +114,7 @@
     {#if user}
         <div>
             soon lmao
-            
+
             <form method="POST" action="?/logout" use:enhance>
                 <button class="btn btn-sm btn-primary text-secondary"> logout </button>
             </form>
