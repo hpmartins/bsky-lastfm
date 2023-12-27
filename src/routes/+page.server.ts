@@ -12,7 +12,7 @@ import {
     SPOTIFY_CALLBACK_URL,
     SPOTIFY_SECRET
 } from '$env/static/private';
-import type { IQuery } from '$lib/types';
+import type { IQuery, SpotifyArtistType } from '$lib/types';
 
 const LASTFM_ENDPOINT = 'http://ws.audioscrobbler.com/2.0';
 const SPOTIFY_ENDPOINT = 'https://api.spotify.com/v1';
@@ -26,6 +26,20 @@ export const load: PageServerLoad = async ({ locals }) => {
         lastfm: Boolean(lastfm),
         spotify: Boolean(spotify)
     };
+};
+
+const getSpotifyPublicAccessToken = async () => {
+    const url = `https://open.spotify.com/get_access_token?reason=transport&productType=web_player`;
+
+    const payload = {
+        method: 'POST'
+    };
+
+    const body = await fetch(url);
+    const response = await body.json();
+
+    if (response.error) return;
+    return response.accessToken as string;
 };
 
 const getSpotifyAccessToken = async (refresh_token: string) => {
@@ -106,6 +120,35 @@ export const actions = {
                         }
                     } as IQuery;
                 });
+
+            const spotifyPublicToken = await getSpotifyPublicAccessToken();
+            const payload = {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${spotifyPublicToken}`
+                }
+            };
+            if (query.data && query.data.type === 'lastfm') {
+                for (const [i, artist] of query.data.list.entries()) {
+                    const spotifySearch = await fetch(
+                        `https://api.spotify.com/v1/search?type=artist&q=${artist.name}&decorate_restrictions=false&best_match=true&include_external=audio&limit=1`,
+                        payload
+                    ).then(res => res.text());
+
+                    if (spotifySearch.length > 0) {
+                        const searchData: {
+                            best_match: {
+                                items: SpotifyArtistType[]
+                            }
+                        } = JSON.parse(spotifySearch);
+
+                        if (searchData.best_match.items.length === 1) {
+                            query.data.list[i].spotifyImage = searchData.best_match.items[0].images[2].url
+                        }
+                    }
+                }
+            }
+
             return {
                 query: query
             };

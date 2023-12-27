@@ -21,6 +21,7 @@ export type LastfmArtistType = {
         size: string;
         '#text': string;
     }[];
+    spotifyImage?: string;
     mbid: string;
     url: string;
     playcount: string;

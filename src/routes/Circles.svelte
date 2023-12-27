@@ -1,6 +1,5 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import dayjs from 'dayjs';
     import type { CirclesOptionsType, IQuery } from '$lib/types';
 
     let canvas: HTMLCanvasElement;
@@ -18,7 +17,7 @@
     if (query.data?.type === 'lastfm') {
         list = query.data.list.map((x) => ({
             name: x.name,
-            image: x.image[1]['#text']
+            image: x.spotifyImage ? x.spotifyImage : x.image[1]['#text'],
         }));
     }
 
