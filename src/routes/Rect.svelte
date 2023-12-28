@@ -14,17 +14,34 @@
         image: string;
     }[] = [];
 
-    if (query.data?.type === 'lastfm') {
+
+    const TIME_RANGE_DICT: {[key: string]: { [key: string]: string}} = {
+        'lastfm': {
+            '7day': 'dos últimos 7 dias',
+            '1month': 'dos últimos 30 dias',
+            '3month': 'dos últimos 3 meses',
+            '6month': 'dos últimos 6 meses',
+            '12month': 'dos últimos 12 meses',
+            'overall': 'desde sempre',
+        },
+        'spotify': {
+            'short_term': 'dos últimos 30 dias',
+            'medium_term': 'dos últimos 6 meses',
+            'long_term': 'desde sempre',
+        }
+    }
+
+    if (query.data?.service === 'lastfm') {
         list = query.data.list.map((x) => ({
             name: x.name,
-            image: x.spotifyImage ? x.spotifyImage : x.image[1]['#text'],
+            image: x.spotifyImage ? x.spotifyImage : x.image[0]['#text'],
         }));
     }
 
-    if (query.data?.type === 'spotify') {
+    if (query.data?.service === 'spotify') {
         list = query.data.list.map((x) => ({
             name: x.name,
-            image: x.images[2].url
+            image: x.images[0].url
         }));
     }
 
@@ -37,32 +54,34 @@
         return brightness > 155;
     }
 
-    const numberOfRows = 2;
     const perRow = 5;
+    const numberOfRows = Math.ceil(list.length / perRow);
 
-    const globalBorder = 10;
-    const imageBorder = 3;
+    const globalBorder = 15;
+    const imageBorder = 6;
     const imageFooter = 0;
     const footerHeight = 0;
 
-    const headerHeight = 25 + globalBorder;
+    const headerHeight = 40 + globalBorder;
     const logoSize = headerHeight - globalBorder;
-    const width = 600;
+    const width = 900;
     const height = headerHeight + footerHeight + (width / perRow + imageFooter) * numberOfRows;
 
     const fullWidth = width + 2*globalBorder;
     const fullHeight = height + 2*globalBorder;
 
+    const fontSize = width/30 
+
     const images = list.slice(0, numberOfRows * perRow);
 
     let headerLogo: string;
     let headerText: string;
-    if (query.data?.type === 'lastfm') {
+    if (query.data?.service === 'lastfm') {
         headerLogo = '/lastfm.svg';
-        headerText = `Top ${numberOfRows*perRow} artistas dos últimos 7 dias`;
-    } else if (query.data?.type === 'spotify') {
+        headerText = `Top ${numberOfRows*perRow} artistas ${TIME_RANGE_DICT[query.data.service][query.data.time_range]}`;
+    } else if (query.data?.service === 'spotify') {
         headerLogo = '/spotify.svg';
-        headerText = `Top ${numberOfRows*perRow} artistas dos últimos 30 dias`;
+        headerText = `Top ${numberOfRows*perRow} artistas ${TIME_RANGE_DICT[query.data.service][query.data.time_range]}`;
     }
 
     // this runs every time the Circles component is remounted,
@@ -82,7 +101,7 @@
         context.imageSmoothingEnabled = true;
         context.imageSmoothingQuality = 'medium';
 
-        context.font = '16px Arial';
+        context.font = `${fontSize}px sans-serif`;
         context.fillStyle = textColor;
 
         context.textBaseline = 'middle';
@@ -91,7 +110,7 @@
 
         if (options.add_border) {
             context.strokeStyle = options.border_color;
-            context.lineWidth = 10;
+            context.lineWidth = 15;
             context.beginPath();
             context.roundRect(0, 0, fullWidth, fullHeight, 10);
             context.stroke();
@@ -115,11 +134,7 @@
             new Promise((resolve, reject) => {
                 const img = new Image();
                 img.setAttribute('crossOrigin', 'anonymous');
-                if (data.image.startsWith('/')) {
-                    img.src = data.image;
-                } else {
-                    img.src = data.image;
-                }
+                img.src = data.image;
                 img.onload = function () {
                     if (!context) return reject;
                     context.save();
@@ -135,6 +150,7 @@
         for (let row = 0; row < images.length; row += perRow) {
             const chunk = images.slice(row, row + perRow);
             for (let i = 0; i < perRow; i++) {
+                if (!chunk[i]) break;
                 promises.push(
                     preload(
                         { image: chunk[i].image },
@@ -149,10 +165,10 @@
         }
 
         Promise.allSettled(promises).then(() => {
-            circlesImage.src = canvas.toDataURL();
+            circlesImage.src = canvas.toDataURL('image/png', 1);
         });
     });
 </script>
 
 <canvas hidden bind:this={canvas} width={fullWidth} height={fullHeight} />
-<img bind:this={circlesImage} alt="" />
+<img width={600} bind:this={circlesImage} alt="" />

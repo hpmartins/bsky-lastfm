@@ -14,14 +14,14 @@
         image: string;
     }[] = [];
 
-    if (query.data?.type === 'lastfm') {
+    if (query.data?.service === 'lastfm') {
         list = query.data.list.map((x) => ({
             name: x.name,
             image: x.spotifyImage ? x.spotifyImage : x.image[1]['#text'],
         }));
     }
 
-    if (query.data?.type === 'spotify') {
+    if (query.data?.service === 'spotify') {
         list = query.data.list.map((x) => ({
             name: x.name,
             image: x.images[2].url
@@ -61,9 +61,9 @@
         };
 
         let center: string;
-        if (query.data?.type === 'lastfm') {
+        if (query.data?.service === 'lastfm') {
             center = '/lastfm.svg';
-        } else if (query.data?.type === 'spotify') {
+        } else if (query.data?.service === 'spotify') {
             center = '/spotify.svg';
         } else return;
 

@@ -67,17 +67,27 @@ const getSpotifyAccessToken = async (refresh_token: string) => {
     return response.access_token as string;
 };
 
+const LASTFM_DICT: {[key: string]: string} = {
+    'artists': 'getTopArtists',
+    'albums': 'getTopAlbums',
+}
+
 export const actions = {
-    spotifyPreview: async ({ locals }) => {
+    spotifyPreview: async ({ locals, request, params }) => {
         if (locals.spotify) {
+            const formData = await request.formData();
+            const type = String(formData.get('spotifyType'));
+            const time_range = String(formData.get('spotifyTimeRange'));
+            const limit = String(formData.get('spotifyLimit'));
+
             const access_token = await getSpotifyAccessToken(locals.spotify.refresh_token);
             if (access_token) {
                 const params = new URLSearchParams({
-                    time_range: 'short_term',
-                    limit: String(30)
+                    time_range: time_range,
+                    limit: limit
                 });
 
-                const query = await fetch(`${SPOTIFY_ENDPOINT}/me/top/artists?${params}`, {
+                const query = await fetch(`${SPOTIFY_ENDPOINT}/me/top/${type}?${params}`, {
                     headers: {
                         Authorization: `Bearer ${access_token}`
                     }
@@ -87,7 +97,9 @@ export const actions = {
                         if (res.error) return res as IQuery;
                         return {
                             data: {
-                                type: 'spotify',
+                                service: 'spotify',
+                                type: type,
+                                time_range: time_range,
                                 list: res.items
                             }
                         } as IQuery;
@@ -98,13 +110,18 @@ export const actions = {
             }
         }
     },
-    lastfmPreview: async ({ locals }) => {
+    lastfmPreview: async ({ locals, request }) => {
         if (locals.lastfm) {
+            const formData = await request.formData();
+            const type = String(formData.get('lastfmType'));
+            const time_range = String(formData.get('lastfmTimeRange'));
+            const limit = String(formData.get('lastfmLimit'));
+
             const params = new URLSearchParams({
-                method: 'user.getTopArtists',
+                method: `user.${LASTFM_DICT[type]}`,
                 user: locals.lastfm.name,
-                period: '7day',
-                limit: String(30),
+                period: time_range,
+                limit: limit,
                 api_key: LASTFM_API_KEY,
                 format: 'json'
             });
@@ -113,13 +130,29 @@ export const actions = {
                 .then((res) => res.json())
                 .then((res) => {
                     if (res.error) return res as IQuery;
-                    return {
-                        data: {
-                            type: 'lastfm',
-                            list: res.topartists.artist
-                        }
-                    } as IQuery;
+
+
+                    if (type === 'artists') {
+                        return {
+                            data: {
+                                service: 'lastfm',
+                                type: 'artists',
+                                time_range: time_range,
+                                list: res.topartists.artist
+                            }
+                        } as IQuery;
+                    } else if (type === 'albums') {
+                        return {
+                            data: {
+                                service: 'lastfm',
+                                type: 'albums',
+                                time_range: time_range,
+                                list: res.topalbums.album
+                            }
+                        } as IQuery;
+                    }
                 });
+                
 
             const spotifyPublicToken = await getSpotifyPublicAccessToken();
             const payload = {
@@ -128,22 +161,22 @@ export const actions = {
                     Authorization: `Bearer ${spotifyPublicToken}`
                 }
             };
-            if (query.data && query.data.type === 'lastfm') {
-                for (const [i, artist] of query.data.list.entries()) {
+            if (query && query.data && query.data.service === 'lastfm') {
+                for (const [i, item] of query.data.list.entries()) {
                     const spotifySearch = await fetch(
-                        `https://api.spotify.com/v1/search?type=artist&q=${artist.name}&decorate_restrictions=false&best_match=true&include_external=audio&limit=1`,
+                        `https://api.spotify.com/v1/search?type=artist&q=${item.name}&decorate_restrictions=false&best_match=true&include_external=audio&limit=1`,
                         payload
-                    ).then(res => res.text());
+                    ).then((res) => res.text());
 
                     if (spotifySearch.length > 0) {
                         const searchData: {
                             best_match: {
-                                items: SpotifyArtistType[]
-                            }
+                                items: SpotifyArtistType[];
+                            };
                         } = JSON.parse(spotifySearch);
 
                         if (searchData.best_match.items.length === 1) {
-                            query.data.list[i].spotifyImage = searchData.best_match.items[0].images[2].url
+                            query.data.list[i].spotifyImage = searchData.best_match.items[0].images[0].url;
                         }
                     }
                 }

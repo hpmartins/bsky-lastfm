@@ -8,27 +8,41 @@
         count?: number;
     }[] = [];
 
-    if (query.data?.type === 'lastfm') {
-        list = query.data.list.slice(0, 10).map((x) => ({
+    const TIME_RANGE_DICT: {[key: string]: { [key: string]: string}} = {
+        'lastfm': {
+            '7day': '7 dias',
+            '1month': '1 mês',
+            '3month': '3 meses',
+            '6month': '6 meses',
+            '12month': '12 meses',
+            'overall': 'desde sempre',
+        },
+        'spotify': {
+            'short_term': '1 mês',
+            'medium_term': '6 meses',
+            'long_term': 'desde sempre',
+        }
+    }
+
+    if (query.data?.service === 'lastfm') {
+        list = query.data.list.map((x) => ({
             name: x.name,
             count: Number(x.playcount)
         }));
     }
 
-    if (query.data?.type === 'spotify') {
-        list = query.data.list.slice(0, 10).map((x) => ({
+    if (query.data?.service === 'spotify') {
+        list = query.data.list.map((x) => ({
             name: x.name
         }));
     }
 </script>
 
 <div class="text-left">
-    {#if query.data?.type === 'lastfm'}
-        <p class="text-lg text-bold underline">Last.fm</p>
-        <p class="italic">Last week: top 10 artists</p>
-    {:else if query.data?.type === 'spotify'}
-        <p class="text-lg text-bold underline">Spotify</p>
-        <p class="italic">Last month: top 10 artists</p>
+    {#if query.data?.service === 'lastfm'}
+        <p class="text-lg text-bold">Last.fm ({TIME_RANGE_DICT[query.data.service][query.data.time_range]}) - Top {query.data.list.length} {query.data.type}</p>
+    {:else if query.data?.service === 'spotify'}
+        <p class="text-lg text-bold">Spotify ({TIME_RANGE_DICT[query.data.service][query.data.time_range]}) - Top {query.data.list.length} {query.data.type}</p>
     {/if}
     {#each list as artist, index}
         <p>{index + 1}. {artist.name}{artist.count ? ` (${artist.count})` : ''}</p>
